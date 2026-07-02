@@ -1,0 +1,4 @@
+[submodule "ext/ant-javacard"]
+	path = ext/ant-javacard
+	url = https://github.com/martinpaljak/ant-javacard.git
+	branch = next

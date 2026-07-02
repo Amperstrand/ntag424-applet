@@ -1,0 +1,20 @@
+# build output (ant-javacard prepare + javacard cap)
+/build/
+
+# stray artifacts if build dir is missing
+*.cap
+*.jca
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# tools local secrets (see tools/.gitignore when present)
+/tools/fixtures/local.json
+/tools/fixtures/uid.hex
+/tools/fixtures/read_sig.hex
+/tools/fixtures/golden_physical.json
+/tools/*.log

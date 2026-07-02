@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ntag424-applet" default="build" basedir=".">
+
+    <description>JavaCard applet emulating NTAG 424 DNA behavior</description>
+
+    <property name="ext.ant-javacard" value="ext/ant-javacard"/>
+    <property name="sdk.jckit" value="${ext.ant-javacard}/sdks/jc305u4_kit"/>
+    <property name="sdk.jc222" value="${ext.ant-javacard}/sdks/jc222_kit"/>
+
+    <target name="clean" description="Delete build output">
+        <delete dir="build"/>
+    </target>
+
+    <target name="prepare" description="Prepare build">
+        <ant dir="${ext.ant-javacard}"/>
+        <taskdef name="javacard"
+                 classpath="${ext.ant-javacard}/ant-javacard.jar"
+                 classname="pro.javacard.ant.JavaCard"/>
+        <mkdir dir="build/javacard"/>
+        <mkdir dir="build/classes"/>
+    </target>
+
+    <target name="build" description="Build CAP (416 B NDEF)" depends="prepare">
+        <delete dir="build/classes"/>
+        <mkdir dir="build/classes"/>
+        <javacard jckit="${sdk.jckit}">
+            <cap targetsdk="${sdk.jc222}"
+                 output="build/javacard/ntag424-applet.cap"
+                 jar="build/javacard/ntag424-applet.jar"
+                 classes="build/classes"
+                 sources="src/main/java"
+                 aid="D2760000850101"
+                 version="1.0"
+                 strip="true">
+                <applet aid="D276000085010101"
+                        class="com.ntag424.Ntag424Applet"/>
+            </cap>
+        </javacard>
+        <length file="build/javacard/ntag424-applet.cap" property="cap.bytes"/>
+        <echo message="ntag424-applet.cap: ${cap.bytes} bytes (NDEF 416)"/>
+    </target>
+
+    <target name="test" description="Build only" depends="build"/>
+
+</project>
