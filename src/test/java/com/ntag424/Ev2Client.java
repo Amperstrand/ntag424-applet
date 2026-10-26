@@ -122,53 +122,6 @@ public final class Ev2Client {
         return o;
     }
 
-
-    // --- session-encrypted commands (5F etc.) --------------------------------
-
-    /** Encrypt a command payload: ISO-9797-1 M2 pad + CBC(sesEnc, derived IV).
-     *  Mirrors the applet's decryptCommandData (prefix 5A A5). */
-    public byte[] encryptCommand(byte[] plaintext) throws Exception {
-        // empirically pinned (SdmDebug sweep): command-data IV uses the
-        // A5 5A prefix with the CURRENT counter (before this command's MAC)
-        byte[] iv = sessionIv(ENC_IV_PREFIX);
-        int padLen = ((plaintext.length / 16) + 1) * 16;
-        byte[] padded = new byte[padLen];
-        System.arraycopy(plaintext, 0, padded, 0, plaintext.length);
-        padded[plaintext.length] = (byte) 0x80;
-        return cbc(sesEnc, Cipher.ENCRYPT_MODE, iv, padded);
-    }
-
-    /** CBC IV = AES(sesEnc, prefix2 || TI(4) || ctrLE2 || zeros6). */
-    private byte[] sessionIv(byte[] prefix) throws Exception {
-        byte[] ivIn = new byte[16];
-        ivIn[0] = prefix[0]; ivIn[1] = prefix[1];
-        System.arraycopy(ti, 0, ivIn, 2, 4);
-        ivIn[6] = (byte) (ctr & 0xFF);
-        ivIn[7] = (byte) ((ctr >> 8) & 0xFF);
-        return aesEcb(sesEnc, Cipher.ENCRYPT_MODE, ivIn, 0, 16);
-    }
-
-    /**
-     * MAC'd + encrypted ChangeFileSettings (INS 5F). Plaintext =
-     * options(1) || rights(2) || [SDM block]. Returns sw; verifies the
-     * MACt response when present.
-     */
-    public int changeFileSettings(AppletTestBase rig, byte fileNo, byte[] plaintext) throws Exception {
-        byte[] enc = encryptCommand(plaintext);
-        byte[] body = macCommand((byte) 0x5F, new byte[]{fileNo}, enc);
-        Response r = transmit(rig, (byte) 0x5F, body);
-        if (r.sw != 0x9100) return r.sw;
-        // command MAC consumed a counter at verify; response MACt (Case-1
-        // style, data=empty) is verified and advances again per applet flow:
-        // applet advanced once at cmd verify; response MACt over next ctr.
-        if (r.data.length >= 8) {
-            if (!verifyResponse((byte) 0x00, r.data)) return 0x911E;
-        } else {
-            ctr++; // bare response: only the command-side advance happened
-        }
-        return r.sw;
-    }
-
     // --- transport + crypto helpers ----------------------------------------
     public static class Response {
         public int sw;

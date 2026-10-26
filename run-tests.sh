@@ -8,8 +8,8 @@ JC=jcardsim-2.2.2-unsigned.jar
 JUNIT=junit-platform-console-standalone-1.10.2.jar
 SIM=${SIM_LIB:-$HOME/.m2/repository/com/licel/jcardsim/2.2.2/$JC}
 if [ ! -f "$SIM" ]; then
-  mkdir -p "$(dirname "$SIM")"
-  curl -sL -o "$SIM" https://repo1.maven.org/maven2/com/licel/jcardsim/2.2.2/$JC
+  echo "jcardsim not found at $SIM — install via maven or set SIM_LIB" >&2
+  exit 1
 fi
 if [ ! -f "$JUNIT" ]; then
   curl -sL -o "$JUNIT" https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/1.10.2/$JUNIT
