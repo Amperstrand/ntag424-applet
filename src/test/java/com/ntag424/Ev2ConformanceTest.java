@@ -39,7 +39,7 @@ class Ev2ConformanceTest extends AppletTestBase {
 
     /** Plain ReadData (INS AD, file 02, offset 0, len 4). */
     private int plainRead() throws Exception {
-        byte[] body = {0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00};
+        byte[] body = {0x02, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00};
         Ev2Client.Response r = Ev2Client.transmit(this, (byte) 0xAD, body);
         if (r.sw == 0x9100 && ev2.active) {
             // silicon parity: EVERY authenticated-session command advances

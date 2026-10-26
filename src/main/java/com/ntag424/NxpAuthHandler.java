@@ -36,17 +36,17 @@ final class NxpAuthHandler {
 
         byte keyNum = buffer[ISO7816.OFFSET_CDATA];
         if (keyNum >= Ntag424Constants.NUM_KEYS) {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+            host.throwNxp((byte) 0xCA); // silicon: 91 CA for invalid key number
         }
         boolean origKey = Ntag424Constants.isOriginalityKey(keyNum);
 
         if (nonFirst) {
             if (session.authStage != 0) {
-                ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+                host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
             }
             if (!session.active) {
                 if (!origKey || !piccConfig.lrpEnabled) {
-                    ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+                    host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
                 }
             }
         }
@@ -163,12 +163,12 @@ final class NxpAuthHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         byte keyNum = buffer[ISO7816.OFFSET_CDATA];
         if (keyNum >= Ntag424Constants.NUM_KEYS) {
-            ISOException.throwIt(ISO7816.SW_WRONG_DATA);
+            host.throwNxp((byte) 0xCA); // silicon: 91 CA for invalid key number
         }
 
         short payloadOff = (short) (ISO7816.OFFSET_CDATA + 1);

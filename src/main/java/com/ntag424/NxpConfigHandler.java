@@ -76,7 +76,7 @@ final class NxpConfigHandler {
     void processGetCardUid(APDU apdu) {
         short lc = apdu.setIncomingAndReceive();
         if (!session.active) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         byte comm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_GET_CARD_UID, session);
         host.unwrapHeaderMac(Ntag424Constants.CMD_GET_CARD_UID, apdu.getBuffer(),
@@ -96,7 +96,7 @@ final class NxpConfigHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         byte comm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_READ_SIG, session);
         short hdrLen = host.unwrapHeaderMac(Ntag424Constants.CMD_READ_SIG, buffer,
@@ -114,7 +114,7 @@ final class NxpConfigHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (lc != Ntag424Constants.UID_LEN) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
@@ -152,7 +152,7 @@ final class NxpConfigHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (lc < 10) {
             host.throwNxp(Ntag424Constants.SW_LENGTH_ERROR);

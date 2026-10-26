@@ -143,7 +143,9 @@ public final class NxpHandler {
                 files.processDeleteFile(apdu);
                 break;
             default:
-                ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+                // silicon returns 91 7E for unknown NXP-session commands
+                // (not ISO 6D00 — wire-verified 2026-10-27)
+                throwNxp(Ntag424Constants.SW_LENGTH_ERROR);
         }
     }
 
@@ -262,7 +264,7 @@ public final class NxpHandler {
             return ndefFile;
         }
         if (!AccessControl.allowsSdmRead(ndefSettings)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (sdmSession.isPrepared(channel)) {
             return sdmSession.cache();

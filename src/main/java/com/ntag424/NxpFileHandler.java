@@ -43,11 +43,11 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         byte[] file = host.getFile(fileNum);
         if (file == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         byte comm = CommModeHelper.fileCommMode(fs, session, CommModeHelper.OP_READ);
@@ -63,17 +63,26 @@ final class NxpFileHandler {
 
         short offset = UtilCompat.getOffset3(buffer, (short) (ISO7816.OFFSET_CDATA + 1));
         short length = UtilCompat.getOffset3(buffer, (short) (ISO7816.OFFSET_CDATA + 4));
+        if (length == 0) {
+            // NT4H2421Gx 10.8.1: length=0 means "entire file from offset",
+            // capped at the short-Le response limit
+            length = (short) (fs.fileSize - offset);
+            if (length > 256) {
+                length = 256;
+            }
+        }
 
         if (offset < 0 || length < 0 || (short) (offset + length) > fs.fileSize) {
-            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+            // silicon returns 91 BE (boundary), not ISO wrong-length
+            host.throwNxp(Ntag424Constants.SW_BOUNDARY_ERROR);
         }
 
         if (!AccessControl.allowsRead(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (fileNum == Ntag424Constants.FILE_NDEF && fs.sdmEnabled
                 && !AccessControl.allowsSdmRead(fs)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         byte[] outFile = file;
@@ -98,15 +107,15 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         byte[] file = host.getFile(fileNum);
         if (file == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         if (!AccessControl.allowsWrite(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         byte comm = CommModeHelper.fileCommMode(fs, session, CommModeHelper.OP_WRITE);
@@ -187,7 +196,7 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         short len = fs.encodeFull(Ntag424Constants.FILE_TYPE_STD, scratch, (short) 0);
@@ -206,11 +215,11 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         if (!AccessControl.allowsChange(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         short payloadOff = (short) (ISO7816.OFFSET_CDATA + 1);
@@ -258,10 +267,10 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (!AccessControl.allowsCounterRead(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         UtilCompat.setOffset3(scratch, (short) 0, fs.readCounter);
         byte respComm = CommModeHelper.responseCommMode(Ntag424Constants.CMD_GET_READ_COUNTER,
@@ -285,13 +294,13 @@ final class NxpFileHandler {
             host.throwNxp(Ntag424Constants.SW_FILE_EXISTS);
         }
         if (extraFiles.slotIndex(fileNum) < 0) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (lc == 1) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         short payloadOff = (short) (ISO7816.OFFSET_CDATA + 1);
@@ -328,10 +337,10 @@ final class NxpFileHandler {
             host.throwNxp(Ntag424Constants.SW_PARAMETER_ERROR);
         }
         if (!extraFiles.isAllocated(fileNum)) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         extraFiles.delete(fileNum);
         host.sendOkMacResponse(apdu);
