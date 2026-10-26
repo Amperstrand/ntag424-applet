@@ -55,8 +55,7 @@ final class NxpConfigHandler {
         byte respComm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_GET_VERSION, session);
         if (versionFrame == 1) {
             versionFrame = 2;
-            // NT4H2421Gx §10.5.2: chained GetVersion carries the MACt ONLY
-            // on the final frame (cumulative); intermediate frames are plain.
+            // intermediate frames are plain; MACt on final frame only (10.5.2)
             host.sendNxpResponse(apdu, Ntag424Constants.VERSION_SW, (short) 0,
                 Ntag424Constants.VERSION_INFO_LEN, Ntag424Constants.SW_ADDITIONAL_FRAME);
             return;

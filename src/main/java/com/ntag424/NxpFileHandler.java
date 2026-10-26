@@ -54,10 +54,7 @@ final class NxpFileHandler {
         short hdrLen = host.unwrapHeaderMac(Ntag424Constants.CMD_READ_DATA, buffer,
             ISO7816.OFFSET_CDATA, READ_HDR_LEN, lc, comm);
         if (!CommModeHelper.needsCommandMac(comm) && session.active) {
-            // NT4H2421Gx §9.1.2: CmdCtr advances on EVERY command of an
-            // authenticated session, including CommMode.Plain exchanges.
-            // Verified against silicon via the ntag424 crate's HW-capture
-            // replay test (plain read advances CmdCtr 9 -> 10).
+            // CmdCtr advances on plain commands too (9.1.2)
             session.cmdCounter++;
         }
         if (hdrLen != READ_HDR_LEN) {
@@ -125,8 +122,6 @@ final class NxpFileHandler {
             dataOff = (short) (ISO7816.OFFSET_CDATA + READ_HDR_LEN);
             dataLen = (short) (lc - READ_HDR_LEN);
             if (session.active) {
-                // §9.1.2: CmdCtr advances on plain exchanges too (see
-                // processReadData note; silicon-verified).
                 session.cmdCounter++;
             }
         } else if (comm == Ntag424Constants.COMM_MAC) {

@@ -151,11 +151,8 @@ public final class NxpHandler {
         ISOException.throwIt((short) ((Ntag424Constants.SW_NXP_OK << 8) | (sw2 & 0xFF)));
     }
 
-    /// State-changing commands (ChangeFileSettings, ChangeKey, CreateFile,
-    /// DeleteFile, SetConfiguration) answer MACt(8) over SW with an active
-    /// session (NT4H2421Gx §9.1: response MACt uses the post-command-
-    /// increment CmdCtr). sendNxpResponse throws, so the counter must
-    /// already be advanced by the caller.
+    // state-changing commands answer MACt(8) when a session is active;
+    // sendNxpResponse throws, so the caller must advance CmdCtr first
     void sendOkMacResponse(APDU apdu) {
         if (session.active) {
             session.appendResponseMac(Ntag424Constants.SW_OK, null, (short) 0, (short) 0,
