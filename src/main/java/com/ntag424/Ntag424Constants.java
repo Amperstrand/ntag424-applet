@@ -119,6 +119,11 @@ public final class Ntag424Constants {
     public static final byte SW_PARAMETER_ERROR = (byte) 0x9E;
     public static final byte SW_AUTHENTICATION_ERROR = (byte) 0xAE;
     public static final byte SW_AUTHENTICATION_DELAY = (byte) 0xAD;
+    public static final byte SW_BOUNDARY_ERROR = (byte) 0xBE;
+    public static final byte SW_NOT_ALLOWED = (byte) 0x1C;
+    // 0xF0 on silicon = "file not found" (NXP SW space); the existing
+    // SW_FILE_EXISTS name is a misnomer — value verified on real silicon
+    public static final byte SW_FILE_NOT_FOUND = (byte) 0xF0;
 
     public static final byte AUTH_MODE_LRP = 0x01;
     public static final byte PCD_CAP2_LEN = 6;

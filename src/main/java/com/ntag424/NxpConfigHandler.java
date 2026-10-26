@@ -55,13 +55,7 @@ final class NxpConfigHandler {
         byte respComm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_GET_VERSION, session);
         if (versionFrame == 1) {
             versionFrame = 2;
-        // NTA_CHANNEL: //! - Chained `CommMode.MAC` commands (e.g. `GetVersion`, §10.5.2)
-        // //!   reuse the lower-level primitives [`compute_cmd_mac`] and
-        // //!   [`verify_response_mac_and_advance`] directly, because only the
-        // //!   last response frame carries the cumulative `MACt`.
-
-            // NT4H2421Gx §10.5.2: chained GetVersion carries the MACt ONLY
-            // on the final frame (cumulative); intermediate frames are plain.
+            // intermediate frames are plain; MACt on final frame only (10.5.2)
             host.sendNxpResponse(apdu, Ntag424Constants.VERSION_SW, (short) 0,
                 Ntag424Constants.VERSION_INFO_LEN, Ntag424Constants.SW_ADDITIONAL_FRAME);
             return;
@@ -82,7 +76,7 @@ final class NxpConfigHandler {
     void processGetCardUid(APDU apdu) {
         short lc = apdu.setIncomingAndReceive();
         if (!session.active) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         byte comm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_GET_CARD_UID, session);
         host.unwrapHeaderMac(Ntag424Constants.CMD_GET_CARD_UID, apdu.getBuffer(),
@@ -102,7 +96,7 @@ final class NxpConfigHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         byte comm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_READ_SIG, session);
         short hdrLen = host.unwrapHeaderMac(Ntag424Constants.CMD_READ_SIG, buffer,
@@ -120,7 +114,7 @@ final class NxpConfigHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (lc != Ntag424Constants.UID_LEN) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
@@ -158,7 +152,7 @@ final class NxpConfigHandler {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (lc < 10) {
             host.throwNxp(Ntag424Constants.SW_LENGTH_ERROR);

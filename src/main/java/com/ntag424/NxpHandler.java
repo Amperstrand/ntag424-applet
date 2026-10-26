@@ -143,7 +143,9 @@ public final class NxpHandler {
                 files.processDeleteFile(apdu);
                 break;
             default:
-                ISOException.throwIt(ISO7816.SW_INS_NOT_SUPPORTED);
+                // silicon returns 91 7E for unknown NXP-session commands
+                // (not ISO 6D00 — wire-verified 2026-10-27)
+                throwNxp(Ntag424Constants.SW_LENGTH_ERROR);
         }
     }
 
@@ -151,15 +153,8 @@ public final class NxpHandler {
         ISOException.throwIt((short) ((Ntag424Constants.SW_NXP_OK << 8) | (sw2 & 0xFF)));
     }
 
-    /// State-changing commands (ChangeFileSettings, ChangeKey, CreateFile,
-    /// DeleteFile, SetConfiguration) answer MACt(8) over SW with an active
-    /// session (NT4H2421Gx §9.1: response MACt uses the post-command-
-    /// increment CmdCtr). sendNxpResponse throws, so the counter must
-    /// already be advanced by the caller.
-        // NTA_CFS: /// The response is `MACt(8)` with SW `91 00`; no encrypted data is
-        // /// returned. The response MAC is verified and `CmdCtr` is advanced on
-        // /// success.
-
+    // state-changing commands answer MACt(8) when a session is active;
+    // sendNxpResponse throws, so the caller must advance CmdCtr first
     void sendOkMacResponse(APDU apdu) {
         if (session.active) {
             session.appendResponseMac(Ntag424Constants.SW_OK, null, (short) 0, (short) 0,
@@ -187,10 +182,6 @@ public final class NxpHandler {
         if (lc != (short) (hdrLen + MAC_LEN)) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
-        // NTA_COUNTER: /// Advance `CmdCtr` by one (§9.1.2). Called after a successful
-        // /// secure-messaging exchange (MAC or FULL); `CmdCtr` stays put on
-        // /// failure and on `CommMode.Plain` passthrough.
-
         verifyCommandMac(cmd, buf, hdrOff, hdrLen, buf, (short) 0, (short) 0,
             (short) (hdrOff + hdrLen));
         session.cmdCounter++;
@@ -273,7 +264,7 @@ public final class NxpHandler {
             return ndefFile;
         }
         if (!AccessControl.allowsSdmRead(ndefSettings)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (sdmSession.isPrepared(channel)) {
             return sdmSession.cache();

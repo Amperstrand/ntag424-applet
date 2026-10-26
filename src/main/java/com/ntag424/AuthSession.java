@@ -189,9 +189,6 @@ public final class AuthSession {
         UtilCompat.arrayCopy(rndA, (short) 8, sv, (short) 24, (short) 8);
     }
 
-        // NTA_CHANNEL: /// Compute `MACt` over `Cmd || CmdCtr(LE) || TI || CmdHeader || CmdData`
-        // /// (§9.1.9). Exposed for chained-command implementations
-
     public boolean verifyCommandMac(byte cmd, byte[] hdr, short hdrOff, short hdrLen,
                                      byte[] data, short dataOff, short dataLen,
                                      byte[] mac, short macOff) {

@@ -2,8 +2,6 @@ package com.ntag424;
 
 import javacard.framework.JCSystem;
 
-    // BOLT_SPEC: - the bolt card service must only accept an increasing counter value
-
 // Secure Dynamic Messaging: inject UID, counter, encrypted data, and MAC on NDEF read.
 public final class SdmHandler {
     private static final byte[] SV_MAC_PREFIX = {0x3C, (byte) 0xC3, 0x00, 0x01, 0x00, (byte) 0x80};
@@ -107,8 +105,6 @@ public final class SdmHandler {
                 (short) (outLen - inLen * 2), (byte) 0);
         }
     }
-
-    // BOLT_SPEC: - for the `p` value and the `SDM Meta Read Access Key` value, decrypt the UID and counter with AES
 
     private void encryptPiccData(byte[] uid, short uidOff, FileSettings fs,
                                    byte[] file, short fileOff,
@@ -218,8 +214,6 @@ public final class SdmHandler {
             deriveSdmKey(SV_MAC_PREFIX, (short) 0, (short) 6,
                 keyData, keyOff, uid, uidOff, fs, false);
             cmac.setKey(work.sessionKey, (short) 0);
-            // BOLT_SPEC: - for the `c` value and the `SDM File Read Access Key` value, check with AES-CMAC
-
             cmac.compute(file, macInputOff, macLen, work.block16, (short) 0);
             AesCmac.shortenCmac(work.block16, (short) 0, work.sessionKey, (short) 0);
         }

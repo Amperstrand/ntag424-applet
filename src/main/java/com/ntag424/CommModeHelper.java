@@ -7,14 +7,6 @@ public final class CommModeHelper {
 
     private CommModeHelper() {}
 
-        // NTA_SESSION: /// The required communication mode can be determined by the file's configuration,
-        // /// with one exception: when the
-        // /// only access condition granting the current session access to the
-        // /// targeted right (`Read` / `ReadWrite` / SDM file-read) is free
-        // /// access, plain communication mode must be used even though the
-        // /// session is authenticated. You may use [`Self::read_file_plain`]
-        // /// in this case.
-
     static byte fileCommMode(FileSettings fs, AuthSession session, byte op) {
         if (!session.active) {
             return Ntag424Constants.COMM_PLAIN;

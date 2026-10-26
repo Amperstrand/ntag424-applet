@@ -33,13 +33,6 @@ final class NxpFileHandler {
         this.host = host;
     }
 
-        // KNOWN DIVERGENCE (audit 2026-10-27): ReadData with length 0 returns
-        // empty instead of the remaining file bytes; the quote below pins the
-        // required silicon behavior (NT4H2421Gx 10.8.1).
-
-        // NTA_SESSION: /// `length = 0` means "entire file from `offset`". Returns the
-        // /// number of bytes copied into `buf`.
-
     void processReadData(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
@@ -50,32 +43,18 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         byte[] file = host.getFile(fileNum);
         if (file == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         byte comm = CommModeHelper.fileCommMode(fs, session, CommModeHelper.OP_READ);
         short hdrLen = host.unwrapHeaderMac(Ntag424Constants.CMD_READ_DATA, buffer,
             ISO7816.OFFSET_CDATA, READ_HDR_LEN, lc, comm);
-        // NTA_TESTS: /// Replay a hardware-captured authenticated plain NDEF read through
-        // /// `Session::read_file_plain` (AES session).
-        // ///
-        // /// This is the free-access edge case where the session remains authenticated
-        // /// but the command still uses plain communication. The on-wire APDU is
-        // /// identical to an unauthenticated plain read; the unique session-layer
-        // /// behavior is advancing `CmdCtr` from 8 to 9 after success.
-
-        // NTA_SESSION: /// counter, even when the wire framing is plain. MAC and Full modes also
-        // /// derive or verify secure-messaging data from that counter; Plain mode
-
         if (!CommModeHelper.needsCommandMac(comm) && session.active) {
-            // NT4H2421Gx §9.1.2: CmdCtr advances on EVERY command of an
-            // authenticated session, including CommMode.Plain exchanges.
-            // Verified against silicon via the ntag424 crate's HW-capture
-            // replay test (plain read advances CmdCtr 9 -> 10).
+            // CmdCtr advances on plain commands too (9.1.2)
             session.cmdCounter++;
         }
         if (hdrLen != READ_HDR_LEN) {
@@ -84,17 +63,26 @@ final class NxpFileHandler {
 
         short offset = UtilCompat.getOffset3(buffer, (short) (ISO7816.OFFSET_CDATA + 1));
         short length = UtilCompat.getOffset3(buffer, (short) (ISO7816.OFFSET_CDATA + 4));
+        if (length == 0) {
+            // NT4H2421Gx 10.8.1: length=0 means "entire file from offset",
+            // capped at the short-Le response limit
+            length = (short) (fs.fileSize - offset);
+            if (length > 256) {
+                length = 256;
+            }
+        }
 
         if (offset < 0 || length < 0 || (short) (offset + length) > fs.fileSize) {
-            ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
+            // silicon returns 91 BE (boundary), not ISO wrong-length
+            host.throwNxp(Ntag424Constants.SW_BOUNDARY_ERROR);
         }
 
         if (!AccessControl.allowsRead(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         if (fileNum == Ntag424Constants.FILE_NDEF && fs.sdmEnabled
                 && !AccessControl.allowsSdmRead(fs)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         byte[] outFile = file;
@@ -119,15 +107,15 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         byte[] file = host.getFile(fileNum);
         if (file == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         if (!AccessControl.allowsWrite(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         byte comm = CommModeHelper.fileCommMode(fs, session, CommModeHelper.OP_WRITE);
@@ -142,17 +130,7 @@ final class NxpFileHandler {
             }
             dataOff = (short) (ISO7816.OFFSET_CDATA + READ_HDR_LEN);
             dataLen = (short) (lc - READ_HDR_LEN);
-            // NTA_TESTS: /// Replay a hardware-captured authenticated plain NDEF read through
-            // /// `Session::read_file_plain` (AES session).
-            // ///
-            // /// This is the free-access edge case where the session remains authenticated
-            // /// but the command still uses plain communication. The on-wire APDU is
-            // /// identical to an unauthenticated plain read; the unique session-layer
-            // /// behavior is advancing `CmdCtr` from 8 to 9 after success.
-
             if (session.active) {
-                // §9.1.2: CmdCtr advances on plain exchanges too (see
-                // processReadData note; silicon-verified).
                 session.cmdCounter++;
             }
         } else if (comm == Ntag424Constants.COMM_MAC) {
@@ -218,7 +196,7 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         short len = fs.encodeFull(Ntag424Constants.FILE_TYPE_STD, scratch, (short) 0);
@@ -237,11 +215,11 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
 
         if (!AccessControl.allowsChange(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         short payloadOff = (short) (ISO7816.OFFSET_CDATA + 1);
@@ -250,10 +228,6 @@ final class NxpFileHandler {
         if (payloadLen <= 8) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
-        // NTA_CFS: /// The response is `MACt(8)` with SW `91 00`; no encrypted data is
-        // /// returned. The response MAC is verified and `CmdCtr` is advanced on
-        // /// success.
-
         short macOff = (short) (payloadOff + payloadLen - 8);
         host.verifyCommandMac(Ntag424Constants.CMD_CHANGE_FILE_SETTINGS,
             buffer, ISO7816.OFFSET_CDATA, (short) 1,
@@ -293,10 +267,10 @@ final class NxpFileHandler {
         byte fileNum = buffer[ISO7816.OFFSET_CDATA];
         FileSettings fs = host.getSettings(fileNum);
         if (fs == null) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (!AccessControl.allowsCounterRead(fs, session)) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         UtilCompat.setOffset3(scratch, (short) 0, fs.readCounter);
         byte respComm = CommModeHelper.responseCommMode(Ntag424Constants.CMD_GET_READ_COUNTER,
@@ -320,13 +294,13 @@ final class NxpFileHandler {
             host.throwNxp(Ntag424Constants.SW_FILE_EXISTS);
         }
         if (extraFiles.slotIndex(fileNum) < 0) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (lc == 1) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
 
         short payloadOff = (short) (ISO7816.OFFSET_CDATA + 1);
@@ -363,10 +337,10 @@ final class NxpFileHandler {
             host.throwNxp(Ntag424Constants.SW_PARAMETER_ERROR);
         }
         if (!extraFiles.isAllocated(fileNum)) {
-            ISOException.throwIt(ISO7816.SW_FILE_NOT_FOUND);
+            host.throwNxp(Ntag424Constants.SW_FILE_NOT_FOUND);
         }
         if (!session.active || session.authKeyNum != 0) {
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_NOT_ALLOWED);
         }
         extraFiles.delete(fileNum);
         host.sendOkMacResponse(apdu);
