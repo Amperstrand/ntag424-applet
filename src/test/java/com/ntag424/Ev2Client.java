@@ -123,6 +123,40 @@ public final class Ev2Client {
     }
 
 
+
+    /** Continue an in-progress auth given the AuthFirst response
+     *  (extracted from SiliconParityTest's step executor). */
+    public Response continueAuthCapture(AppletTestBase rig, Response af) throws Exception {
+        Response out = _continueAuth(rig, af);
+        return out;
+    }
+
+    public void continueAuth(AppletTestBase rig, Response af) throws Exception {
+        _continueAuth(rig, af);
+    }
+
+    private Response _continueAuth(AppletTestBase rig, Response af) throws Exception {
+        byte[] rndA = new byte[16];
+        new java.security.SecureRandom().nextBytes(rndA);
+        byte[] rndB = aesEcb(new byte[16], Cipher.DECRYPT_MODE, af.data, 0, 16);
+        System.arraycopy(cmac(new byte[16], sv(ENC_PURPOSE, rndA, rndB)), 0, sesEnc, 0, 16);
+        System.arraycopy(cmac(new byte[16], sv(MAC_PURPOSE, rndA, rndB)), 0, sesMac, 0, 16);
+        byte[] payload = new byte[32];
+        System.arraycopy(rndA, 0, payload, 0, 16);
+        System.arraycopy(rotLeft(rndB), 0, payload, 16, 16);
+        byte[] enc = cbc(new byte[16], Cipher.ENCRYPT_MODE, new byte[16], payload);
+        Response r2 = transmit(rig, (byte) 0xAF, enc);
+        if (r2.sw != 0x9100) throw new AssertionError("AuthSecond " + Integer.toHexString(r2.sw));
+        byte[] resp = cbc(new byte[16], Cipher.DECRYPT_MODE, new byte[16], r2.data);
+        System.arraycopy(resp, 0, ti, 0, 4);
+        ctr = 0;
+        active = true;
+        this.rndALast = rndA;
+        return r2;
+    }
+
+    private byte[] rndALast;
+
     // --- session-encrypted commands (5F etc.) --------------------------------
 
     /** Encrypt a command payload: ISO-9797-1 M2 pad + CBC(sesEnc, derived IV).
