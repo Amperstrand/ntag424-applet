@@ -203,6 +203,13 @@ final class NxpAuthHandler {
             keyVersions[keyNum] = scratch[(short) (payloadOff + 16)];
         }
 
-        host.sendOkMacResponse(apdu);
+        // NT4H2421Gx §5.16.2 Table 26 step 18: changing KEY 0 (master, no
+        // old-key XOR) answers 91 00 with NO MACt; K1-K4 changes answer
+        // MACt(8) (§5.16.1 Table 25 step 20).
+        if (keyNum == 0) {
+            host.sendNxpResponse(apdu, null, (short) 0, (short) 0, Ntag424Constants.SW_OK);
+        } else {
+            host.sendOkMacResponse(apdu);
+        }
     }
 }
