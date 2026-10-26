@@ -209,6 +209,6 @@ final class NxpConfigHandler {
             host.throwNxp(Ntag424Constants.SW_AUTHENTICATION_ERROR);
         }
 
-        host.sendNxpResponse(apdu, null, (short) 0, (short) 0, Ntag424Constants.SW_OK);
+        host.sendOkMacResponse(apdu);
     }
 }

@@ -142,7 +142,7 @@ final class NxpAuthHandler {
             session.authStage = 0;
             boolean origKey = Ntag424Constants.isOriginalityKey(session.authKeyNum);
             piccConfig.onAuthFail(origKey);
-            ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
+            host.throwNxp(Ntag424Constants.SW_AUTHENTICATION_ERROR);
         }
 
         session.completeAuth(keys, (short) (session.authKeyNum * 16), session.authNonFirst);
@@ -203,6 +203,6 @@ final class NxpAuthHandler {
             keyVersions[keyNum] = scratch[(short) (payloadOff + 16)];
         }
 
-        host.sendNxpResponse(apdu, null, (short) 0, (short) 0, Ntag424Constants.SW_OK);
+        host.sendOkMacResponse(apdu);
     }
 }

@@ -53,6 +53,13 @@ final class NxpFileHandler {
         byte comm = CommModeHelper.fileCommMode(fs, session, CommModeHelper.OP_READ);
         short hdrLen = host.unwrapHeaderMac(Ntag424Constants.CMD_READ_DATA, buffer,
             ISO7816.OFFSET_CDATA, READ_HDR_LEN, lc, comm);
+        if (!CommModeHelper.needsCommandMac(comm) && session.active) {
+            // NT4H2421Gx §9.1.2: CmdCtr advances on EVERY command of an
+            // authenticated session, including CommMode.Plain exchanges.
+            // Verified against silicon via the ntag424 crate's HW-capture
+            // replay test (plain read advances CmdCtr 9 -> 10).
+            session.cmdCounter++;
+        }
         if (hdrLen != READ_HDR_LEN) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
@@ -117,6 +124,11 @@ final class NxpFileHandler {
             }
             dataOff = (short) (ISO7816.OFFSET_CDATA + READ_HDR_LEN);
             dataLen = (short) (lc - READ_HDR_LEN);
+            if (session.active) {
+                // §9.1.2: CmdCtr advances on plain exchanges too (see
+                // processReadData note; silicon-verified).
+                session.cmdCounter++;
+            }
         } else if (comm == Ntag424Constants.COMM_MAC) {
             if (lc != (short) (READ_HDR_LEN + length + MAC_LEN)) {
                 ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
@@ -231,7 +243,7 @@ final class NxpFileHandler {
             host.sdmSession().invalidate();
         }
 
-        host.sendProtectedResponse(apdu, Ntag424Constants.COMM_PLAIN, null, (short) 0, (short) 0);
+        host.sendOkMacResponse(apdu);
     }
 
     void processGetReadCounter(APDU apdu) {
@@ -305,7 +317,7 @@ final class NxpFileHandler {
         if (!extraFiles.create(fileNum, scratch, (short) 0, decLen)) {
             host.throwNxp(Ntag424Constants.SW_PARAMETER_ERROR);
         }
-        host.sendNxpResponse(apdu, null, (short) 0, (short) 0, Ntag424Constants.SW_OK);
+        host.sendOkMacResponse(apdu);
     }
 
     void processDeleteFile(APDU apdu) {
@@ -327,6 +339,6 @@ final class NxpFileHandler {
             ISOException.throwIt(ISO7816.SW_SECURITY_STATUS_NOT_SATISFIED);
         }
         extraFiles.delete(fileNum);
-        host.sendNxpResponse(apdu, null, (short) 0, (short) 0, Ntag424Constants.SW_OK);
+        host.sendOkMacResponse(apdu);
     }
 }
