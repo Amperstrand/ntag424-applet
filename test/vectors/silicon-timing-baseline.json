@@ -1,0 +1,9 @@
+{
+ "description": "Silicon APDU exchange latency baseline (usbmon pcapng, host->device bulk start to device->host response). ACR1252 + NTAG424 04C474FA967380 key-battery 2026-10-26. NOTE: median is dominated by pcscd session-establishment gaps between CLI invocations; within-session exchanges: ISO select/read ~1-4ms, auth/changekey 40-200ms (AES + EEPROM writes). Baseline for the J3R180-applet A/B: jcardsim is in-memory so expect ~10-100x faster per exchange with a flat profile.",
+ "n": 26,
+ "min_us": 37480,
+ "median_us": 58044,
+ "p90_us": 82926,
+ "max_us": 205918,
+ "distribution_note": "bimodal: sub-ms ISO/select exchanges vs multi-ms auth/changekey (AES + EEPROM writes on silicon)"
+}
