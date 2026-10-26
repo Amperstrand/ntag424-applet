@@ -1,0 +1,68 @@
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+  - event: tag
+  - event: manual
+
+variables:
+  - &rust_image "rust:1.88.0"
+  - &cargo_env
+      CARGO_BUILD_JOBS: "4"
+      CARGO_TERM_COLOR: "always"
+
+steps:
+  test-default:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked -- --test-threads=4
+
+  test-all-features:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked --all-features -- --test-threads=4
+
+  test-alloc-only:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked --no-default-features --features alloc -- --test-threads=4
+
+  test-key-diversification:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked --features key-diversification -- --test-threads=4
+
+  test-sdm:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked --features sdm -- --test-threads=4
+
+  test-serde:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked --features serde -- --test-threads=4
+
+  test-sdm-serde:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo test -p ntag424 --locked --no-default-features --features "alloc,sdm,serde" -- --test-threads=4
+
+  verify-no-std:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - rustup target add thumbv7em-none-eabihf
+      - cargo build -p ntag424 --locked --no-default-features --target thumbv7em-none-eabihf
+
+  verify-publish:
+    image: *rust_image
+    environment: *cargo_env
+    commands:
+      - cargo publish -p ntag424 --locked --dry-run

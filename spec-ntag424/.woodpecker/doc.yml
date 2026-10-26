@@ -1,0 +1,18 @@
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+  - event: manual
+
+steps:
+  doc:
+    image: "rustlang/rust:nightly"
+    environment:
+      CARGO_BUILD_JOBS: "4"
+      CARGO_TERM_COLOR: "always"
+      RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+    commands:
+      - apt-get update
+      - apt-get install -y --no-install-recommends pkgconf libpcsclite-dev
+      - cargo doc --workspace --locked --all-features --no-deps
+      # doc tests run in test.yml

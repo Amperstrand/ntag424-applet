@@ -1,0 +1,23 @@
+[package]
+name = "ntag424-verification"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "ntag424-verification"
+path = "main.rs"
+
+[dependencies]
+anyhow.workspace = true
+dialoguer.workspace = true
+example-utils.workspace = true
+ntag424 = { workspace = true, features = [
+  "key-diversification",
+  "sdm",
+  "alloc",
+  "serde",
+] }
+ntag424-pcsc.workspace = true
+pcsc.workspace = true
+serde.workspace = true
+serde_json.workspace = true

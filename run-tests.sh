@@ -19,5 +19,7 @@ rm -rf build/test-classes
 mkdir -p build/test-classes
 javac --release 17 -cp "$SIM" -d build/test-classes $(find src/main/java -name "*.java")
 javac --release 17 -cp "$SIM:build/test-classes:$JUNIT" -d build/test-classes $(find src/test/java -name "*.java")
+cp src/test/resources/* build/test-classes/ 2>/dev/null || true
+cp test/vectors/*.json build/test-classes/ 2>/dev/null || true
 java -jar "$JUNIT" execute -cp "$SIM:build/test-classes" --scan-classpath --details=tree \
   --reports-dir=build/test-reports 2>&1 | tee build/test-output.log | tail -40
