@@ -33,6 +33,13 @@ final class NxpFileHandler {
         this.host = host;
     }
 
+        // KNOWN DIVERGENCE (audit 2026-10-27): ReadData with length 0 returns
+        // empty instead of the remaining file bytes; the quote below pins the
+        // required silicon behavior (NT4H2421Gx 10.8.1).
+
+        // NTA_SESSION: /// `length = 0` means "entire file from `offset`". Returns the
+        // /// number of bytes copied into `buf`.
+
     void processReadData(APDU apdu) {
         byte[] buffer = apdu.getBuffer();
         short lc = apdu.setIncomingAndReceive();
@@ -53,6 +60,17 @@ final class NxpFileHandler {
         byte comm = CommModeHelper.fileCommMode(fs, session, CommModeHelper.OP_READ);
         short hdrLen = host.unwrapHeaderMac(Ntag424Constants.CMD_READ_DATA, buffer,
             ISO7816.OFFSET_CDATA, READ_HDR_LEN, lc, comm);
+        // NTA_TESTS: /// Replay a hardware-captured authenticated plain NDEF read through
+        // /// `Session::read_file_plain` (AES session).
+        // ///
+        // /// This is the free-access edge case where the session remains authenticated
+        // /// but the command still uses plain communication. The on-wire APDU is
+        // /// identical to an unauthenticated plain read; the unique session-layer
+        // /// behavior is advancing `CmdCtr` from 8 to 9 after success.
+
+        // NTA_SESSION: /// counter, even when the wire framing is plain. MAC and Full modes also
+        // /// derive or verify secure-messaging data from that counter; Plain mode
+
         if (!CommModeHelper.needsCommandMac(comm) && session.active) {
             // NT4H2421Gx §9.1.2: CmdCtr advances on EVERY command of an
             // authenticated session, including CommMode.Plain exchanges.
@@ -124,6 +142,14 @@ final class NxpFileHandler {
             }
             dataOff = (short) (ISO7816.OFFSET_CDATA + READ_HDR_LEN);
             dataLen = (short) (lc - READ_HDR_LEN);
+            // NTA_TESTS: /// Replay a hardware-captured authenticated plain NDEF read through
+            // /// `Session::read_file_plain` (AES session).
+            // ///
+            // /// This is the free-access edge case where the session remains authenticated
+            // /// but the command still uses plain communication. The on-wire APDU is
+            // /// identical to an unauthenticated plain read; the unique session-layer
+            // /// behavior is advancing `CmdCtr` from 8 to 9 after success.
+
             if (session.active) {
                 // §9.1.2: CmdCtr advances on plain exchanges too (see
                 // processReadData note; silicon-verified).
@@ -224,6 +250,10 @@ final class NxpFileHandler {
         if (payloadLen <= 8) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
+        // NTA_CFS: /// The response is `MACt(8)` with SW `91 00`; no encrypted data is
+        // /// returned. The response MAC is verified and `CmdCtr` is advanced on
+        // /// success.
+
         short macOff = (short) (payloadOff + payloadLen - 8);
         host.verifyCommandMac(Ntag424Constants.CMD_CHANGE_FILE_SETTINGS,
             buffer, ISO7816.OFFSET_CDATA, (short) 1,

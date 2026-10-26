@@ -55,6 +55,11 @@ final class NxpConfigHandler {
         byte respComm = CommModeHelper.metaCommMode(Ntag424Constants.CMD_GET_VERSION, session);
         if (versionFrame == 1) {
             versionFrame = 2;
+        // NTA_CHANNEL: //! - Chained `CommMode.MAC` commands (e.g. `GetVersion`, §10.5.2)
+        // //!   reuse the lower-level primitives [`compute_cmd_mac`] and
+        // //!   [`verify_response_mac_and_advance`] directly, because only the
+        // //!   last response frame carries the cumulative `MACt`.
+
             // NT4H2421Gx §10.5.2: chained GetVersion carries the MACt ONLY
             // on the final frame (cumulative); intermediate frames are plain.
             host.sendNxpResponse(apdu, Ntag424Constants.VERSION_SW, (short) 0,

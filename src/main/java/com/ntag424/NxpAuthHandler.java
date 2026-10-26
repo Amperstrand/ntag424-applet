@@ -203,6 +203,15 @@ final class NxpAuthHandler {
             keyVersions[keyNum] = scratch[(short) (payloadOff + 16)];
         }
 
+        // NTA_KEY: /// Encrypts the prepared 32-byte plaintext, builds the `90 C4 …` APDU,
+        // /// sends it, and either verifies the trailing `MACt` (Case 1) or checks
+        // /// that the response body is empty (Case 2). Advances `CmdCtr` on
+        // /// success.
+
+        // NTA_KEY: // Case 1: 8-byte MACt over empty RespData (§5.16.1 Table 25 step 20).
+
+        // NTA_KEY: // Case 2: PICC returns 91 00 with no MACt (§5.16.2 Table 26 step 18).
+
         // NT4H2421Gx §5.16.2 Table 26 step 18: changing KEY 0 (master, no
         // old-key XOR) answers 91 00 with NO MACt; K1-K4 changes answer
         // MACt(8) (§5.16.1 Table 25 step 20).

@@ -156,6 +156,10 @@ public final class NxpHandler {
     /// session (NT4H2421Gx §9.1: response MACt uses the post-command-
     /// increment CmdCtr). sendNxpResponse throws, so the counter must
     /// already be advanced by the caller.
+        // NTA_CFS: /// The response is `MACt(8)` with SW `91 00`; no encrypted data is
+        // /// returned. The response MAC is verified and `CmdCtr` is advanced on
+        // /// success.
+
     void sendOkMacResponse(APDU apdu) {
         if (session.active) {
             session.appendResponseMac(Ntag424Constants.SW_OK, null, (short) 0, (short) 0,
@@ -183,6 +187,10 @@ public final class NxpHandler {
         if (lc != (short) (hdrLen + MAC_LEN)) {
             ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
         }
+        // NTA_COUNTER: /// Advance `CmdCtr` by one (§9.1.2). Called after a successful
+        // /// secure-messaging exchange (MAC or FULL); `CmdCtr` stays put on
+        // /// failure and on `CommMode.Plain` passthrough.
+
         verifyCommandMac(cmd, buf, hdrOff, hdrLen, buf, (short) 0, (short) 0,
             (short) (hdrOff + hdrLen));
         session.cmdCounter++;

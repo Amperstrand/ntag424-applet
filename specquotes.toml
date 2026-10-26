@@ -1,0 +1,81 @@
+# greatspectations spec-quote drift config for the ntag424-applet fork
+#
+# Tool: Amperstrand fork https://github.com/Amperstrand/greatspectations
+#       (branch ai-experimental-slop; same pin as bolty-rs)
+# Sources (PINNED, never floating-HEAD):
+#   - spec-boltcard/  : https://github.com/boltcard/boltcard (docs/, markdown)
+#                       bolt-card service rules for p= / c= / counter acceptance
+#   - spec-ntag424/   : https://github.com/Amperstrand/ntag424 @ 7927c40
+#                       (the silicon-validated host implementation this fork's
+#                       fixes were A/B-tested against). NXP's NTAG424 datasheet
+#                       and AN12196 are proprietary PDFs with no canonical text
+#                       source (bolty-rs policy); quoting the validated crate's
+#                       rule text provides a cross-implementation conformance
+#                       lock for that wire layer instead.
+#
+# Comment marker syntax in Java source:
+#   // BOLT_SPEC:  <verbatim quote from spec-boltcard/docs/SPEC.md>
+#   // BOLT_DET:   <verbatim quote from spec-boltcard/docs/DETERMINISTIC.md>
+#   // BOLT_PRIV:  <verbatim quote from spec-boltcard/docs/CARD_PRIVACY.md>
+#   // NTA_*:      <verbatim quote from the pinned ntag424 crate source>
+#
+# Traps (bolty-rs AGENTS "Spec Conformance" applies here too): consecutive
+# `//` lines join into ONE multi-line quote; separate quotes from prose with
+# a blank line; quotes are verbatim including backticks.
+#
+# Setup (one-time, local):
+#   git clone --depth=1 https://github.com/boltcard/boltcard spec-boltcard
+#   git clone https://github.com/Amperstrand/ntag424 spec-ntag424
+#   git -C spec-ntag424 checkout 7927c40
+#   uv venv .gs-env && uv pip install --python .gs-env/bin/python \
+#       git+https://github.com/Amperstrand/greatspectations.git@ai-experimental-slop
+#
+# Run (from repo root):
+#   .gs-env/bin/python -m greatspectations check --config specquotes.toml \
+#       --comment-start '// ' --comment-continue '//' -k -v src/main/java/com/ntag424
+
+[sources.BOLT_SPEC]
+format = "markdown"
+file = "spec-boltcard/docs/SPEC.md"
+comment_marker = "BOLT_SPEC"
+normative = ["35", "36", "39"]
+
+[sources.BOLT_DET]
+format = "markdown"
+file = "spec-boltcard/docs/DETERMINISTIC.md"
+comment_marker = "BOLT_DET"
+
+[sources.BOLT_PRIV]
+format = "markdown"
+file = "spec-boltcard/docs/CARD_PRIVACY.md"
+comment_marker = "BOLT_PRIV"
+
+[sources.NTA_SESSION]
+format = "markdown"
+file = "spec-ntag424/ntag424/src/session/authenticated_session.rs"
+comment_marker = "NTA_SESSION"
+
+[sources.NTA_COUNTER]
+format = "markdown"
+file = "spec-ntag424/ntag424/src/session/authenticated.rs"
+comment_marker = "NTA_COUNTER"
+
+[sources.NTA_TESTS]
+format = "markdown"
+file = "spec-ntag424/ntag424/src/session/tests.rs"
+comment_marker = "NTA_TESTS"
+
+[sources.NTA_CHANNEL]
+format = "markdown"
+file = "spec-ntag424/ntag424/src/commands/secure_channel.rs"
+comment_marker = "NTA_CHANNEL"
+
+[sources.NTA_KEY]
+format = "markdown"
+file = "spec-ntag424/ntag424/src/commands/change_key.rs"
+comment_marker = "NTA_KEY"
+
+[sources.NTA_CFS]
+format = "markdown"
+file = "spec-ntag424/ntag424/src/commands/change_file_settings.rs"
+comment_marker = "NTA_CFS"

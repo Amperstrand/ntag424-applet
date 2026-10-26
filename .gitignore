@@ -18,3 +18,8 @@ Thumbs.db
 /tools/fixtures/read_sig.hex
 /tools/fixtures/golden_physical.json
 /tools/*.log
+spec-boltcard/
+spec-ntag424/
+.gs-env/
+build/
+*.jar
